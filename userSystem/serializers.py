@@ -82,3 +82,12 @@ class LogoutSerializer(serializers.Serializer):
             token.blacklist()
         except TokenError:
             self.fail('bad_token')
+
+
+# class PasswordResetRequestSerializer(serializers.Serializer):
+#     email = serializers.EmailField()
+
+# class PasswordResetConfirmSerializer(serializers.Serializer):
+#     uidb64 = serializers.CharField()
+#     token = serializers.CharField()
+#     new_password = serializers.CharField(min_length=8)
