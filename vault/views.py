@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from cryptography.fernet import Fernet
 from .models import EncryptedFile
 from .serializers import EncryptedFileSerializer
+from rest_framework import status
 
 class UploadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -79,3 +80,23 @@ class EncryptedFileListView(APIView):
         return Response(serializer.data)
     
 
+
+
+class DeleteEncryptedFileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            encrypted_file = EncryptedFile.objects.get(pk=pk, owner=request.user)
+        except EncryptedFile.DoesNotExist:
+            raise Http404("File not found")
+
+        # Encrypted file washla
+        file_path = encrypted_file.file.path
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # model instance washlac database-dan
+        encrypted_file.delete()
+
+        return Response({"message": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
