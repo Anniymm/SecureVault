@@ -65,3 +65,17 @@ class DownloadEncryptedFileView(APIView):
             filename=encrypted_file.filename_original
         )
         return response
+
+
+# List User Files
+# vincaa mflobeli is xedavs sakutar uploaded filebs
+
+class EncryptedFileListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        files = EncryptedFile.objects.filter(owner=request.user)
+        serializer = EncryptedFileSerializer(files, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+
