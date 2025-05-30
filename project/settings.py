@@ -155,3 +155,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
+# master key rom gamoviyeno encrypt-decryptistvis
+from decouple import config
+from cryptography.fernet import Fernet
+
+MASTER_KEY = config("MASTER_KEY")  
+FERNET_MASTER = Fernet(MASTER_KEY)
+

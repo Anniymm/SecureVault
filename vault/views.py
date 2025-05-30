@@ -1,26 +1,31 @@
+import os
+import io
+from django.conf import settings
+from django.http import FileResponse, Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from cryptography.fernet import Fernet
 from .models import EncryptedFile
 from .serializers import EncryptedFileSerializer
-from cryptography.fernet import Fernet
-import os
-from django.http import FileResponse, Http404
-import io
 
 class UploadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         file = request.FILES['file']
-        key = Fernet.generate_key()
-        fernet = Fernet(key)
+        
+        # random key davageneriro da master_key gavuketo encrypt mere 
+        file_key = Fernet.generate_key()
+        encrypted_file_key = settings.FERNET_MASTER.encrypt(file_key)
 
+        fernet = Fernet(file_key)
         encrypted_data = fernet.encrypt(file.read())
 
         encrypted_filename = f"{file.name}.enc"
         file_path = os.path.join('media/encrypted', encrypted_filename)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
         with open(file_path, 'wb') as f:
             f.write(encrypted_data)
 
@@ -28,7 +33,7 @@ class UploadEncryptedFileView(APIView):
             owner=request.user,
             file=f'encrypted/{encrypted_filename}',
             filename_original=file.name,
-            key=key
+            key=encrypted_file_key
         )
 
         serializer = EncryptedFileSerializer(encrypted_file, context={'request': request})
@@ -43,7 +48,10 @@ class DownloadEncryptedFileView(APIView):
         except EncryptedFile.DoesNotExist:
             raise Http404("File not found")
 
-        fernet = Fernet(encrypted_file.key)
+        # master key-it decrypt
+        decrypted_file_key = settings.FERNET_MASTER.decrypt(encrypted_file.key)
+        fernet = Fernet(decrypted_file_key)
+
         file_path = encrypted_file.file.path
 
         with open(file_path, 'rb') as f:
@@ -51,7 +59,6 @@ class DownloadEncryptedFileView(APIView):
 
         decrypted_data = fernet.decrypt(encrypted_data)
 
-        
         response = FileResponse(
             io.BytesIO(decrypted_data),
             as_attachment=True,
