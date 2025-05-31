@@ -40,6 +40,7 @@ class UploadEncryptedFileView(APIView):
         serializer = EncryptedFileSerializer(encrypted_file, context={'request': request})
         return Response(serializer.data)
 
+
 class DownloadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -56,9 +57,13 @@ class DownloadEncryptedFileView(APIView):
         file_path = encrypted_file.file.path
 
         with open(file_path, 'rb') as f:
-            encrypted_data = f.read()
+                encrypted_data = f.read()
 
         decrypted_data = fernet.decrypt(encrypted_data)
+
+        # download_count update
+        encrypted_file.download_count += 1
+        encrypted_file.save()
 
         response = FileResponse(
             io.BytesIO(decrypted_data),
@@ -66,6 +71,7 @@ class DownloadEncryptedFileView(APIView):
             filename=encrypted_file.filename_original
         )
         return response
+
 
 
 # List User Files
