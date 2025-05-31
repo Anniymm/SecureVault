@@ -43,7 +43,7 @@ class UploadEncryptedFileView(APIView):
 
 class DownloadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
-
+    
     def get(self, request, pk):
         try:
             encrypted_file = EncryptedFile.objects.get(pk=pk, owner=request.user)
@@ -51,26 +51,29 @@ class DownloadEncryptedFileView(APIView):
             raise Http404("File not found")
 
         # master key-it decrypt
-        decrypted_file_key = settings.FERNET_MASTER.decrypt(encrypted_file.key)
-        fernet = Fernet(decrypted_file_key)
+        try:
+            decrypted_file_key = settings.FERNET_MASTER.decrypt(encrypted_file.key)
+            fernet = Fernet(decrypted_file_key)
 
-        file_path = encrypted_file.file.path
+            file_path = encrypted_file.file.path
 
-        with open(file_path, 'rb') as f:
-                encrypted_data = f.read()
+            with open(file_path, 'rb') as f:
+                    encrypted_data = f.read()
 
-        decrypted_data = fernet.decrypt(encrypted_data)
+            decrypted_data = fernet.decrypt(encrypted_data)
 
-        # download_count update
-        encrypted_file.download_count += 1
-        encrypted_file.save()
+            # download_count update
+            encrypted_file.download_count += 1
+            encrypted_file.save()
 
-        response = FileResponse(
-            io.BytesIO(decrypted_data),
-            as_attachment=True,
-            filename=encrypted_file.filename_original
-        )
-        return response
+            response = FileResponse(
+                io.BytesIO(decrypted_data),
+                as_attachment=True,
+                filename=encrypted_file.filename_original
+            )
+            return response
+        except Exception as e:
+            return Response({"detail": "File could not be downloaded/not found on my media :) to read file rb ."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
