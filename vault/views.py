@@ -76,15 +76,30 @@ class DownloadEncryptedFileView(APIView):
 
 # List User Files
 # vincaa mflobeli is xedavs sakutar uploaded filebs
+# filtrebi davamate, testingze mushaobs mara mainc maxsovdes ro rame aq )))
 
 class EncryptedFileListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # query paramsebi
+        sort_order = request.query_params.get('sort', 'asc').lower()
+        extension = request.query_params.get('ext', None)
         files = EncryptedFile.objects.filter(owner=request.user)
+        if extension:
+            # wertilic ro iyos an ar iyos wertili 
+            if not extension.startswith('.'):
+                extension = '.' + extension
+            files = files.filter(filename_original__endswith=extension)
+
+        # ascending da descending
+        if sort_order == 'desc':
+            files = files.order_by('-filename_original')
+        else:
+            files = files.order_by('filename_original')
+
         serializer = EncryptedFileSerializer(files, many=True, context={'request': request})
         return Response(serializer.data)
-    
 
 
 
