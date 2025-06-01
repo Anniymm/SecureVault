@@ -9,6 +9,9 @@ from cryptography.fernet import Fernet
 from .models import EncryptedFile
 from .serializers import EncryptedFileSerializer
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.generics import ListAPIView
+
 
 class UploadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -76,35 +79,38 @@ class DownloadEncryptedFileView(APIView):
             return Response({"detail": "File could not be downloaded/not found on my media :) to read file rb ."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class FilePagination(PageNumberPagination):
+    page_size = 5  
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 
 # List User Files
 # vincaa mflobeli is xedavs sakutar uploaded filebs
 # filtrebi davamate, testingze mushaobs mara mainc maxsovdes ro rame aq )))
 
-class EncryptedFileListView(APIView):
+class EncryptedFileListView(ListAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = EncryptedFileSerializer
+    pagination_class = FilePagination
 
-    def get(self, request):
-        # query paramsebi
-        sort_order = request.query_params.get('sort', 'asc').lower()
-        extension = request.query_params.get('ext', None)
-        files = EncryptedFile.objects.filter(owner=request.user)
+    def get_queryset(self):
+        sort_order = self.request.query_params.get('sort', 'asc').lower()
+        extension = self.request.query_params.get('ext', None)
+
+        files = EncryptedFile.objects.filter(owner=self.request.user)
+
         if extension:
-            # wertilic ro iyos an ar iyos wertili 
             if not extension.startswith('.'):
                 extension = '.' + extension
             files = files.filter(filename_original__endswith=extension)
 
-        # ascending da descending
         if sort_order == 'desc':
             files = files.order_by('-filename_original')
         else:
             files = files.order_by('filename_original')
 
-        serializer = EncryptedFileSerializer(files, many=True, context={'request': request})
-        return Response(serializer.data)
-
-
+        return files
 
 class DeleteEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
