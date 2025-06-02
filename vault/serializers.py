@@ -16,3 +16,12 @@ class EncryptedFileSerializer(serializers.ModelSerializer):
                 reverse('vault:download_encrypted_file', kwargs={'pk': obj.pk})
             )
         return None
+
+
+
+# class FileActivityLogSerializer(serializers.ModelSerializer):
+#     file_name = serializers.CharField(source='file.filename_original', read_only=True)
+
+#     class Meta:
+#         model = FileActivityLog
+#         fields = ['id', 'file_name', 'action', 'timestamp', 'details']
