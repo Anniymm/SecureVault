@@ -17,21 +17,20 @@ class EncryptedFile(models.Model):
 
 
 
-# class FileActivityLog(models.Model):
-#     ACTION_CHOICES = [
-#         ('upload', 'Uploaded'),
-#         ('download', 'Downloaded'),
-#         ('delete', 'Deleted'),
-#         ('view', 'Viewed'),
-#         # jerjerobit eseni minda
-#     ]
 
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='file_logs')
-#     files = models.ForeignKey('EncryptedFile', on_delete=models.CASCADE, related_name='logs')
-#     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-#     timestamp = models.DateTimeField(auto_now_add=True)
-#     details = models.TextField(blank=True)  # Optional details
+class UserLog(models.Model):
+    ACTION_CHOICES = [
+        ('UPLOAD', 'Upload'),
+        ('DOWNLOAD', 'Download'),
+        ('DELETE', 'Delete'),
+        ('LOGIN', 'Login'),
+        ('LOGOUT', 'Logout'),
+    ]
 
-#     def __str__(self):
-#         return f"{self.user.username} {self.action} {self.file.filename_original} at {self.timestamp}"
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    description = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-timestamp']

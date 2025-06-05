@@ -6,11 +6,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from cryptography.fernet import Fernet
-from .models import EncryptedFile
-from .serializers import EncryptedFileSerializer
+from .models import EncryptedFile, UserLog
+from .serializers import EncryptedFileSerializer, UserLogSerializer
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
+
 
 
 class UploadEncryptedFileView(APIView):
@@ -21,7 +22,6 @@ class UploadEncryptedFileView(APIView):
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         file = request.FILES['file']
-        # random key davageneriro da master_key gavuketo encrypt mere 
         file_key = Fernet.generate_key()
         encrypted_file_key = settings.FERNET_MASTER.encrypt(file_key)
 
@@ -40,6 +40,13 @@ class UploadEncryptedFileView(APIView):
             file=f'encrypted/{encrypted_filename}',
             filename_original=file.name,
             key=encrypted_file_key
+        )
+
+        # 🔒 Log uploadistvis
+        UserLog.objects.create(
+            user=request.user,
+            action='UPLOAD',
+            description=f"Uploaded file: {file.name}"
         )
 
         serializer = EncryptedFileSerializer(encrypted_file, context={'request': request})
@@ -132,3 +139,13 @@ class DeleteEncryptedFileView(APIView):
         encrypted_file.delete()
 
         return Response({"message": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    
+
+class UserLogsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        logs = UserLog.objects.filter(user=request.user)
+        serializer = UserLogSerializer(logs, many=True)
+        return Response(serializer.data)
+    

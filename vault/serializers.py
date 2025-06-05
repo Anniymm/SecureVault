@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import EncryptedFile
+from .models import EncryptedFile, UserLog
 from django.urls import reverse
 
 class EncryptedFileSerializer(serializers.ModelSerializer):
@@ -18,10 +18,7 @@ class EncryptedFileSerializer(serializers.ModelSerializer):
         return None
 
 
-
-# class FileActivityLogSerializer(serializers.ModelSerializer):
-#     file_name = serializers.CharField(source='file.filename_original', read_only=True)
-
-#     class Meta:
-#         model = FileActivityLog
-#         fields = ['id', 'file_name', 'action', 'timestamp', 'details']
+class UserLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserLog
+        fields = ['id', 'action', 'description', 'timestamp']
