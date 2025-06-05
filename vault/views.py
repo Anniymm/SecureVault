@@ -17,8 +17,10 @@ class UploadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
         file = request.FILES['file']
-        
         # random key davageneriro da master_key gavuketo encrypt mere 
         file_key = Fernet.generate_key()
         encrypted_file_key = settings.FERNET_MASTER.encrypt(file_key)
