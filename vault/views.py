@@ -42,7 +42,7 @@ class UploadEncryptedFileView(APIView):
             key=encrypted_file_key
         )
 
-        # 🔒 Log uploadistvis
+        #  Log uploadistvis
         UserLog.objects.create(
             user=request.user,
             action='UPLOAD',
@@ -51,6 +51,7 @@ class UploadEncryptedFileView(APIView):
 
         serializer = EncryptedFileSerializer(encrypted_file, context={'request': request})
         return Response(serializer.data)
+
 
 
 class DownloadEncryptedFileView(APIView):
@@ -62,7 +63,6 @@ class DownloadEncryptedFileView(APIView):
         except EncryptedFile.DoesNotExist:
             raise Http404("File not found")
 
-        # master key-it decrypt
         try:
             decrypted_file_key = settings.FERNET_MASTER.decrypt(encrypted_file.key)
             fernet = Fernet(decrypted_file_key)
@@ -70,13 +70,20 @@ class DownloadEncryptedFileView(APIView):
             file_path = encrypted_file.file.path
 
             with open(file_path, 'rb') as f:
-                    encrypted_data = f.read()
+                encrypted_data = f.read()
 
             decrypted_data = fernet.decrypt(encrypted_data)
 
-            # download_count update
+            # counteri downloadistvis
             encrypted_file.download_count += 1
             encrypted_file.save()
+
+            # logebistvis
+            UserLog.objects.create(
+                user=request.user,
+                action='DOWNLOAD',
+                description=f'Downloaded file: {encrypted_file.filename_original}'
+            )
 
             response = FileResponse(
                 io.BytesIO(decrypted_data),
@@ -84,9 +91,13 @@ class DownloadEncryptedFileView(APIView):
                 filename=encrypted_file.filename_original
             )
             return response
-        except Exception as e:
-            return Response({"detail": "File could not be downloaded/not found on my media :) to read file rb ."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        except Exception as e:
+            return Response(
+                {"detail": "File could not be downloaded/not found on my media :)"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
 
 class FilePagination(PageNumberPagination):
     page_size = 5  
