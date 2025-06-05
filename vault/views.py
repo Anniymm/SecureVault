@@ -153,6 +153,13 @@ class DeleteEncryptedFileView(APIView):
         # model instance washlac database-dan
         encrypted_file.delete()
 
+        # logebistvis
+        UserLog.objects.create(
+                user=request.user,
+                action='DELETE',
+                description=f'deleted file: {encrypted_file.filename_original}'
+            )
+
         return Response({"message": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
     
 
@@ -164,6 +171,7 @@ class UserLogsView(APIView):
         serializer = UserLogSerializer(logs, many=True)
         return Response(serializer.data)
     
+
 class ExportUserLogsView(APIView): 
     permission_classes = [IsAuthenticated]
 
@@ -178,7 +186,6 @@ class ExportUserLogsView(APIView):
                     'action': log.action,
                     'description': log.description,
                     
-                    
                 }
                 for log in logs
             ]
@@ -188,5 +195,5 @@ class ExportUserLogsView(APIView):
             response = HttpResponse(json_content, content_type='application/json')
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
-        except Exception :
-            return Response({"detail": "Unsupported format"}, status=404)
+        except Exception as e:
+            return Response({"detail": e}, status=404)

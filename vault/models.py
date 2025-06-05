@@ -8,7 +8,7 @@ class EncryptedFile(models.Model):
     filename_original = models.CharField(max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     key = models.BinaryField()
-    download_count = models.IntegerField(default=0)
+    download_count = models.IntegerField(default=0, null=True, blank=True)
 
     
 
@@ -31,6 +31,6 @@ class UserLog(models.Model):
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     description = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
-
+    
     class Meta:
         ordering = ['-timestamp']
