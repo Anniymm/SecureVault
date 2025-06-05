@@ -1,7 +1,11 @@
+from datetime import datetime
 import os
 import io
+import json
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 from django.conf import settings
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -160,3 +164,29 @@ class UserLogsView(APIView):
         serializer = UserLogSerializer(logs, many=True)
         return Response(serializer.data)
     
+class ExportUserLogsView(APIView): 
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            export_format = request.query_params.get('format', 'json').lower()
+
+            logs = UserLog.objects.filter(user=request.user).order_by('-timestamp')
+            log_data = [
+                {
+                    'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    'action': log.action,
+                    'description': log.description,
+                    
+                    
+                }
+                for log in logs
+            ]
+
+            filename = f"{request.user.username}_logs_{datetime.now().strftime('%Y-%m-%d')}.json" # ase iyos droebit ra saxelitac daasavebs
+            json_content = json.dumps(log_data, indent=3)
+            response = HttpResponse(json_content, content_type='application/json')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except Exception :
+            return Response({"detail": "Unsupported format"}, status=404)

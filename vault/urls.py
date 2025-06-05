@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import EncryptedFileListView, UploadEncryptedFileView, DownloadEncryptedFileView, DeleteEncryptedFileView, UserLogsView
+from .views import EncryptedFileListView, ExportUserLogsView, UploadEncryptedFileView, DownloadEncryptedFileView, DeleteEncryptedFileView, UserLogsView
 
 app_name = "vault"   # need review for this 
 
@@ -9,4 +9,5 @@ urlpatterns = [
     path('files/', EncryptedFileListView.as_view(), name='file-list'),
     path('delete/<int:pk>/', DeleteEncryptedFileView.as_view(), name='delete-encrypted-file'),
     path('logs/', UserLogsView.as_view(), name='user-logs'),
+    path('export/', ExportUserLogsView.as_view(), name='export-logs'),
 ]
