@@ -2,10 +2,8 @@ from datetime import datetime
 import os
 import io
 import json
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
 from django.conf import settings
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
