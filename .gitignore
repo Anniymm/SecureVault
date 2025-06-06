@@ -22,4 +22,4 @@ rad.json
 TestResults.xml
 venv/
 .env
-
+twofactor/qr.py
