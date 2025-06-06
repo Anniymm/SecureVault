@@ -23,14 +23,12 @@ class UserLog(models.Model):
         ('UPLOAD', 'Upload'),
         ('DOWNLOAD', 'Download'),
         ('DELETE', 'Delete'),
-        ('LOGIN', 'Login'),
-        ('LOGOUT', 'Logout'),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     description = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-timestamp']
