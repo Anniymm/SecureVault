@@ -1,16 +1,19 @@
+from datetime import datetime
 import os
 import io
+import json
 from django.conf import settings
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from cryptography.fernet import Fernet
-from .models import EncryptedFile
-from .serializers import EncryptedFileSerializer
+from .models import EncryptedFile, UserLog
+from .serializers import EncryptedFileSerializer, UserLogSerializer
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
+
 
 
 class UploadEncryptedFileView(APIView):
@@ -21,7 +24,6 @@ class UploadEncryptedFileView(APIView):
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         file = request.FILES['file']
-        # random key davageneriro da master_key gavuketo encrypt mere 
         file_key = Fernet.generate_key()
         encrypted_file_key = settings.FERNET_MASTER.encrypt(file_key)
 
@@ -34,7 +36,7 @@ class UploadEncryptedFileView(APIView):
 
         with open(file_path, 'wb') as f:
             f.write(encrypted_data)
-            
+
         # note = request.data.get('note', '')
         encrypted_file = EncryptedFile.objects.create(
             owner=request.user,
@@ -42,10 +44,19 @@ class UploadEncryptedFileView(APIView):
             filename_original=file.name,
             key=encrypted_file_key,
             note=request.data.get('note', '')
+
+        )
+
+        #  Log uploadistvis
+        UserLog.objects.create(
+            user=request.user,
+            action='UPLOAD',
+            description=f"Uploaded file: {file.name}"
         )
 
         serializer = EncryptedFileSerializer(encrypted_file, context={'request': request})
         return Response(serializer.data)
+
 
 
 class DownloadEncryptedFileView(APIView):
@@ -57,7 +68,6 @@ class DownloadEncryptedFileView(APIView):
         except EncryptedFile.DoesNotExist:
             raise Http404("File not found")
 
-        # master key-it decrypt
         try:
             decrypted_file_key = settings.FERNET_MASTER.decrypt(encrypted_file.key)
             fernet = Fernet(decrypted_file_key)
@@ -65,13 +75,20 @@ class DownloadEncryptedFileView(APIView):
             file_path = encrypted_file.file.path
 
             with open(file_path, 'rb') as f:
-                    encrypted_data = f.read()
+                encrypted_data = f.read()
 
             decrypted_data = fernet.decrypt(encrypted_data)
 
-            # download_count update
+            # counteri downloadistvis
             encrypted_file.download_count += 1
             encrypted_file.save()
+
+            # logebistvis
+            UserLog.objects.create(
+                user=request.user,
+                action='DOWNLOAD',
+                description=f'Downloaded file: {encrypted_file.filename_original}'
+            )
 
             response = FileResponse(
                 io.BytesIO(decrypted_data),
@@ -79,9 +96,13 @@ class DownloadEncryptedFileView(APIView):
                 filename=encrypted_file.filename_original
             )
             return response
-        except Exception as e:
-            return Response({"detail": "File could not be downloaded/not found on my media :) to read file rb ."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        except Exception as e:
+            return Response(
+                {"detail": "File could not be downloaded/not found on my media :)"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
 
 class FilePagination(PageNumberPagination):
     page_size = 5  
@@ -133,4 +154,47 @@ class DeleteEncryptedFileView(APIView):
         # model instance washlac database-dan
         encrypted_file.delete()
 
+        # logebistvis
+        UserLog.objects.create(
+                user=request.user,
+                action='DELETE',
+                description=f'deleted file: {encrypted_file.filename_original}'
+            )
+
         return Response({"message": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    
+
+class UserLogsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        logs = UserLog.objects.filter(user=request.user)
+        serializer = UserLogSerializer(logs, many=True)
+        return Response(serializer.data)
+    
+
+class ExportUserLogsView(APIView): 
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            export_format = request.query_params.get('format', 'json').lower()
+
+            logs = UserLog.objects.filter(user=request.user).order_by('-timestamp')
+            log_data = [
+                {
+                    'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    'action': log.action,
+                    'description': log.description,
+                    
+                }
+                for log in logs
+            ]
+
+            filename = f"{request.user.username}_logs_{datetime.now().strftime('%Y-%m-%d')}.json" # ase iyos droebit ra saxelitac daasavebs
+            json_content = json.dumps(log_data, indent=3)
+            response = HttpResponse(json_content, content_type='application/json')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except Exception as e:
+            return Response({"detail": e}, status=404)
