@@ -9,6 +9,7 @@ class EncryptedFile(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     key = models.BinaryField()
     download_count = models.IntegerField(default=0, null=True, blank=True)
+    note = models.TextField(blank=True, null=True)
 
     
 

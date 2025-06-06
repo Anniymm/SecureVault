@@ -7,7 +7,7 @@ class EncryptedFileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EncryptedFile
-        fields = ['id', 'filename_original', 'uploaded_at', 'download_url', 'download_count']
+        fields = ['id', 'filename_original', 'uploaded_at', 'download_url', 'download_count', 'note']
         read_only_fields = ['download_url', 'download_count']
     def get_download_url(self, obj):
         request = self.context.get('request')
