@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'userSystem',
     'twofactor',
+    'vault',
     
 
 ]
@@ -132,7 +133,11 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+        'PAGE_SIZE': 5,
 }
+
 
 
 AUTH_USER_MODEL = 'userSystem.CustomUser'
@@ -141,7 +146,7 @@ from datetime import timedelta
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=20),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=100),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,  
@@ -149,15 +154,15 @@ SIMPLE_JWT = {
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
 }
 
-# import os
+import os
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = os.getenv('EMAIL_HOST')
-# EMAIL_PORT = os.getenv('EMAIL_PORT')
-# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-# EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS') == 'True'
-# EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL') == 'True'
-# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+# master key rom gamoviyeno encrypt-decryptistvis
+from decouple import config
+from cryptography.fernet import Fernet
+
+MASTER_KEY = config("MASTER_KEY")  
+FERNET_MASTER = Fernet(MASTER_KEY)
 

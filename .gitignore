@@ -23,3 +23,4 @@ TestResults.xml
 venv/
 .env
 twofactor/qr.py
+media/encrypted/ 
