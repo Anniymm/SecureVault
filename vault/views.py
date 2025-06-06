@@ -34,12 +34,14 @@ class UploadEncryptedFileView(APIView):
 
         with open(file_path, 'wb') as f:
             f.write(encrypted_data)
-
+            
+        # note = request.data.get('note', '')
         encrypted_file = EncryptedFile.objects.create(
             owner=request.user,
             file=f'encrypted/{encrypted_filename}',
             filename_original=file.name,
-            key=encrypted_file_key
+            key=encrypted_file_key,
+            note=request.data.get('note', '')
         )
 
         serializer = EncryptedFileSerializer(encrypted_file, context={'request': request})
