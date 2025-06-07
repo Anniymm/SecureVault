@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import EncryptedFileListView, ExportUserLogsView, UploadEncryptedFileView, DownloadEncryptedFileView, DeleteEncryptedFileView, UserLogsView
 
-app_name = "vault"   # need review for this 
+app_name = "vault"   
 
 urlpatterns = [
     path('upload/', UploadEncryptedFileView.as_view(), name='upload_encrypted_file'),

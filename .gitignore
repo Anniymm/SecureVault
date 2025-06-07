@@ -23,4 +23,6 @@ TestResults.xml
 venv/
 .env
 twofactor/qr.py
-media/encrypted/ 
+media/ 
+db.sqlite3
+
