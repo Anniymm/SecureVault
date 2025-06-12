@@ -45,6 +45,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = CustomUser.objects.create_user(**validated_data)
         return user
 
+
+# RegisterView-stvis damwhirdes sheidzleba - ver movarge magram es amit unda shevcvalo samomavlod 
+# class ValidationErrorSerializer(serializers.Serializer):
+#     """
+#     Serializer to represent validation errors returned by DRF.
+#     simply passes the error dictionary as-is, preserving field names and messages.
+#     """
+#     def to_representation(self, instance):  #instanceshia errorebi
+#         return instance
+    
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -91,3 +101,7 @@ class LogoutSerializer(serializers.Serializer):
 #     uidb64 = serializers.CharField()
 #     token = serializers.CharField()
 #     new_password = serializers.CharField(min_length=8)
+
+class TokenResponseSerializer(serializers.Serializer):  # es swaggeristvis mwhirdeba 
+    access = serializers.CharField()
+    refresh = serializers.CharField()

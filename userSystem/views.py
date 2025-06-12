@@ -1,101 +1,151 @@
-from rest_framework import generics
-from .models import CustomUser
-from .serializers import LogoutSerializer, RegisterSerializer, LoginSerializer
+from django.conf import settings
+from .serializers import LogoutSerializer, RegisterSerializer, LoginSerializer, TokenResponseSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework import status, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth import get_user_model
 
 
 class RegisterView(APIView):
+    serializer_class = RegisterSerializer  # swaggeristvis minda es rom fieldebi visible gaxados 
+
+    @extend_schema(
+        request=serializer_class,
+        responses={
+            status.HTTP_201_CREATED: serializer_class,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Validation Error",
+                response=OpenApiTypes.OBJECT,
+                examples=[
+                    OpenApiExample(
+                        "Validation Error Example",
+                        value={
+                            "email": ["Email is already registered.", "Enter a valid email address."],
+                            "password": ["This password is too short. It must contain at least 8 characters."],
+                        },
+                    ),
+                ],
+            ),
+        },
+    )
+    
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)  # Now using class attribute
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "User registered successfully."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 class LoginView(APIView):
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            # user = serializer.validated_data['user']
-            access = serializer.validated_data['access']
-            refresh = serializer.validated_data['refresh']
-
-            return Response({
-                # "user": {
-                #     "id": user.id,
-                #     "username": user.username,
-                #     "email": user.email,
-                #     "first_name": user.first_name,
-                #     "last_name": user.last_name,
-                # },
-                "access": access,
-                "refresh": refresh
-            }, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer_class = LoginSerializer  
     
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(description="Login successful", response=TokenResponseSerializer),
+            400: OpenApiResponse(description="Invalid username or password.")
+        }
+    )
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            return Response({
+                "access": serializer.validated_data['access'],
+                "refresh": serializer.validated_data['refresh']
+            })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class LogoutView(APIView):
+    serializer_class = LogoutSerializer
+    
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(description="Successfully logged out."),
+            400: OpenApiResponse(description="Given token not valid for any token type")
+        }
+    )
+
     def post(self, request):
-        serializer = LogoutSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+            return Response({"detail": "Successfully logged out."})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-# from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-# from django.utils.encoding import force_bytes
-# from django.contrib.auth.tokens import PasswordResetTokenGenerator
-# from django.core.mail import send_mail
-# from django.conf import settings
-# from .serializers import PasswordResetConfirmSerializer
-# from django.contrib.auth import get_user_model
-# User = get_user_model()
-
-# class PasswordResetRequestView(APIView):
-#     def post(self, request):
-#         email = request.data.get('email')
-#         user = User.objects.filter(email=email).first()
-#         if user:
-#             uid = urlsafe_base64_encode(force_bytes(user.pk))
-#             token = PasswordResetTokenGenerator().make_token(user)
-#             reset_url = f"https://frontend.com/reset-password-confirm/{uid}/{token}/"
-
-#             send_mail(
-#                 subject="Password Reset Request",
-#                 message=f"Click the link to reset your password: {reset_url}",
-#                 from_email=settings.DEFAULT_FROM_EMAIL,
-#                 recipient_list=[user.email],
-#             )
-#         # Always return 200 to avoid leaking user existence info
-#         return Response({"message": "If the email exists, a reset link has been sent."}, status=status.HTTP_200_OK)
 
 
-# class PasswordResetConfirmView(APIView):
-#     def post(self, request):
-#         serializer = PasswordResetConfirmSerializer(data=request.data)
-#         if serializer.is_valid():
-#             try:
-#                 uid = urlsafe_base64_decode(serializer.validated_data['uidb64']).decode('utf-8')
-#             except (TypeError, ValueError, OverflowError):
-#                 return Response({"error": "Invalid UID."}, status=status.HTTP_400_BAD_REQUEST)
+User = get_user_model()
+class PasswordResetRequestView(APIView):
+    
+    def post(self, request):
+        email = request.data.get('email')
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-#             token = serializer.validated_data['token']
-#             new_password = serializer.validated_data['new_password']
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
 
-#             user = User.objects.filter(pk=uid).first()
-#             if user and PasswordResetTokenGenerator().check_token(user, token):
-#                 user.set_password(new_password)
-#                 user.save()
-#                 return Response({"message": "Password reset successful."})
-#             return Response({"error": "Invalid token or user ID."}, status=status.HTTP_400_BAD_REQUEST)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        reset_link = f"http://localhost:8000/reset-password-confirm/{uid}/{token}/"
+        
+        send_mail(
+            subject="Password Reset",
+            message=f"Click the link to reset your password: {reset_link}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+        )
+        return Response({'message': 'Password reset link sent'}, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request, uidb64, token):
+        new_password = request.data.get('password')
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (User.DoesNotExist, ValueError, TypeError):
+            return Response({'error': 'Invalid UID'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if default_token_generator.check_token(user, token):
+            user.set_password(new_password)
+            user.save()
+            return Response({'message': 'Password reset successful'}, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request, uidb64, token):
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+
+        if password != confirm_password:
+            return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = get_user_model().objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({'error': 'Invalid token or user ID'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(password)
+        user.save()
+        return Response({'success': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+    
