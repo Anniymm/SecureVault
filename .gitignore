@@ -22,6 +22,6 @@ rad.json
 TestResults.xml
 venv/
 .env
-db.sqlite3
-media/
 twofactor/qr.py
+media/ 
+db.sqlite3
