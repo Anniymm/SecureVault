@@ -171,7 +171,20 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Secure File Vault API',
-    'DESCRIPTION': 'API Documentation',
+    'DESCRIPTION': '''
+This API allows authenticated users to securely upload, download, and manage encrypted files.
+Each file is encrypted with a unique key and stored securely, with options to filter, sort, and delete uploaded files.
+Additionally, user activity is logged and available for review or export in JSON format.
+Endpoints are protected and include detailed schema documentation for client integration.
+
+Main features:
+- Upload and encrypt user files
+- Download and decrypt files securely
+- List files with pagination, sorting, and extension filtering
+- Delete uploaded files
+- View and export user action logs
+- Swagger auto-generated docs with bearer token authentication
+''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,  #  schema endpoint from docs
 
@@ -182,8 +195,7 @@ SPECTACULAR_SETTINGS = {
 
     # Authentication (auto-detects JWT, SessionAuth, etc.)
     'AUTHENTICATION_WHITELIST': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
+    'rest_framework.authentication.TokenAuthentication',
     ],
     'PREPROCESSING_HOOKS': [
         'drf_spectacular.hooks.preprocess_exclude_path_format',

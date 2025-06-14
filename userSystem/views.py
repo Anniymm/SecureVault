@@ -18,6 +18,7 @@ class RegisterView(APIView):
     serializer_class = RegisterSerializer  # swaggeristvis minda es rom fieldebi visible gaxados 
 
     @extend_schema(
+        summary="Register a new user",
         request=serializer_class,
         responses={
             status.HTTP_201_CREATED: serializer_class,
@@ -50,6 +51,7 @@ class LoginView(APIView):
     serializer_class = LoginSerializer  
     
     @extend_schema(
+        summary="Log in and obtain access/refresh tokens",
         responses={
             200: OpenApiResponse(description="Login successful", response=TokenResponseSerializer),
             400: OpenApiResponse(description="Invalid username or password.")
@@ -71,6 +73,7 @@ class LogoutView(APIView):
     serializer_class = LogoutSerializer
     
     @extend_schema(
+        summary="Log out and blacklist the refresh token",
         responses={
             200: OpenApiResponse(description="Successfully logged out."),
             400: OpenApiResponse(description="Given token not valid for any token type")
@@ -91,6 +94,7 @@ User = get_user_model()
 
 class PasswordResetRequestView(APIView):
     @extend_schema(
+        summary="Request password reset link",
         request=PasswordResetRequestSerializer,
         responses={
             status.HTTP_200_OK: OpenApiResponse(description="Password reset link sent"),
@@ -135,6 +139,7 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     @extend_schema(
+        summary="Confirm password reset with token",
         request=PasswordResetConfirmSerializer,
         responses={
             status.HTTP_200_OK: OpenApiResponse(description="Password has been reset successfully."),
