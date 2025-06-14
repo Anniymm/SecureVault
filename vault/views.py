@@ -1,7 +1,7 @@
 from datetime import datetime
-import os
 import io
 import json
+import os
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 from rest_framework.views import APIView
@@ -13,12 +13,21 @@ from .serializers import EncryptedFileSerializer, UserLogSerializer
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
-
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 
 class UploadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = EncryptedFileSerializer
 
+    @extend_schema(
+        summary="Upload and encrypt a file",
+        request=None,
+        responses={
+            201: EncryptedFileSerializer,
+            400: OpenApiResponse(description="No file provided."),
+        }
+    )
     def post(self, request):
         if 'file' not in request.FILES:
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -37,17 +46,14 @@ class UploadEncryptedFileView(APIView):
         with open(file_path, 'wb') as f:
             f.write(encrypted_data)
 
-        # note = request.data.get('note', '')
         encrypted_file = EncryptedFile.objects.create(
             owner=request.user,
             file=f'encrypted/{encrypted_filename}',
             filename_original=file.name,
             key=encrypted_file_key,
             note=request.data.get('note', '')
-
         )
 
-        #  Log uploadistvis
         UserLog.objects.create(
             user=request.user,
             action='UPLOAD',
@@ -55,13 +61,18 @@ class UploadEncryptedFileView(APIView):
         )
 
         serializer = EncryptedFileSerializer(encrypted_file, context={'request': request})
-        return Response(serializer.data)
-
+        return Response(serializer.data, status=201)
 
 
 class DownloadEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
-    
+
+    @extend_schema(
+        summary="Download and decrypt a file",
+        responses={200: OpenApiResponse(description="File download stream"),
+                   404: OpenApiResponse(description="File not found"),
+                   500: OpenApiResponse(description="File could not be downloaded")}
+    )
     def get(self, request, pk):
         try:
             encrypted_file = EncryptedFile.objects.get(pk=pk, owner=request.user)
@@ -71,7 +82,6 @@ class DownloadEncryptedFileView(APIView):
         try:
             decrypted_file_key = settings.FERNET_MASTER.decrypt(encrypted_file.key)
             fernet = Fernet(decrypted_file_key)
-
             file_path = encrypted_file.file.path
 
             with open(file_path, 'rb') as f:
@@ -79,46 +89,44 @@ class DownloadEncryptedFileView(APIView):
 
             decrypted_data = fernet.decrypt(encrypted_data)
 
-            # counteri downloadistvis
             encrypted_file.download_count += 1
             encrypted_file.save()
 
-            # logebistvis
             UserLog.objects.create(
                 user=request.user,
                 action='DOWNLOAD',
                 description=f'Downloaded file: {encrypted_file.filename_original}'
             )
 
-            response = FileResponse(
+            return FileResponse(
                 io.BytesIO(decrypted_data),
                 as_attachment=True,
                 filename=encrypted_file.filename_original
             )
-            return response
 
-        except Exception as e:
+        except Exception:
             return Response(
                 {"detail": "File could not be downloaded/not found on my media :)"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
+
 
 class FilePagination(PageNumberPagination):
-    page_size = 5  
+    page_size = 5
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-
-# List User Files
-# vincaa mflobeli is xedavs sakutar uploaded filebs
-# filtrebi davamate, testingze mushaobs mara mainc maxsovdes ro rame aq )))
 
 class EncryptedFileListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = EncryptedFileSerializer
     pagination_class = FilePagination
 
+    @extend_schema(
+        summary="List encrypted files uploaded by the user",
+        parameters=[],
+        responses={200: EncryptedFileSerializer(many=True)}
+    )
     def get_queryset(self):
         sort_order = self.request.query_params.get('sort', 'asc').lower()
         extension = self.request.query_params.get('ext', None)
@@ -137,45 +145,57 @@ class EncryptedFileListView(ListAPIView):
 
         return files
 
+
 class DeleteEncryptedFileView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Delete an encrypted file",
+        responses={204: OpenApiResponse(description="File deleted successfully."),
+                   404: OpenApiResponse(description="File not found.")}
+    )
     def delete(self, request, pk):
         try:
             encrypted_file = EncryptedFile.objects.get(pk=pk, owner=request.user)
         except EncryptedFile.DoesNotExist:
             raise Http404("File not found")
 
-        # Encrypted file washla
         file_path = encrypted_file.file.path
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        # model instance washlac database-dan
         encrypted_file.delete()
 
-        # logebistvis
         UserLog.objects.create(
-                user=request.user,
-                action='DELETE',
-                description=f'deleted file: {encrypted_file.filename_original}'
-            )
+            user=request.user,
+            action='DELETE',
+            description=f'deleted file: {encrypted_file.filename_original}'
+        )
 
         return Response({"message": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-    
+
 
 class UserLogsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List user action logs",
+        responses={200: UserLogSerializer(many=True)}
+    )
     def get(self, request):
         logs = UserLog.objects.filter(user=request.user)
         serializer = UserLogSerializer(logs, many=True)
         return Response(serializer.data)
-    
 
-class ExportUserLogsView(APIView): 
+
+class ExportUserLogsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Export user logs as a JSON file ( Download the json file of logs )",
+        responses={200: OpenApiResponse(description="JSON log file download."),
+                   404: OpenApiResponse(description="Error generating log export.")}
+    )
     def get(self, request):
         try:
             export_format = request.query_params.get('format', 'json').lower()
@@ -186,15 +206,15 @@ class ExportUserLogsView(APIView):
                     'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                     'action': log.action,
                     'description': log.description,
-                    
                 }
                 for log in logs
             ]
 
-            filename = f"{request.user.username}_logs_{datetime.now().strftime('%Y-%m-%d')}.json" # ase iyos droebit ra saxelitac daasavebs
+            filename = f"{request.user.username}_logs_{datetime.now().strftime('%Y-%m-%d')}.json"
             json_content = json.dumps(log_data, indent=3)
             response = HttpResponse(json_content, content_type='application/json')
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
+
         except Exception as e:
-            return Response({"detail": e}, status=404)
+            return Response({"detail": str(e)}, status=404)

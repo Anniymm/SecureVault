@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import EncryptedFileListView, ExportUserLogsView, UploadEncryptedFileView, DownloadEncryptedFileView, DeleteEncryptedFileView, UserLogsView
+from django.contrib import admin
 
 app_name = "vault"   
 
@@ -10,4 +11,5 @@ urlpatterns = [
     path('delete/<int:pk>/', DeleteEncryptedFileView.as_view(), name='delete-encrypted-file'),
     path('logs/', UserLogsView.as_view(), name='user-logs'),    #es iqve sachveneblad 
     path('export/', ExportUserLogsView.as_view(), name='export-logs'),   # es chamosatvirtad
+    path('admin/', admin.site.urls),
 ]
