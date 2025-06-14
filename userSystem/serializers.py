@@ -46,6 +46,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+
 # RegisterView-stvis damwhirdes sheidzleba - ver movarge magram es amit unda shevcvalo samomavlod 
 # class ValidationErrorSerializer(serializers.Serializer):
 #     """
@@ -55,6 +56,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 #     def to_representation(self, instance):  #instanceshia errorebi
 #         return instance
     
+
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -75,6 +78,7 @@ class LoginSerializer(serializers.Serializer):
         }
     
 
+
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
@@ -94,14 +98,23 @@ class LogoutSerializer(serializers.Serializer):
             self.fail('bad_token')
 
 
-# class PasswordResetRequestSerializer(serializers.Serializer):
-#     email = serializers.EmailField()
 
-# class PasswordResetConfirmSerializer(serializers.Serializer):
-#     uidb64 = serializers.CharField()
-#     token = serializers.CharField()
-#     new_password = serializers.CharField(min_length=8)
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError("Passwords do not match")
+        return attrs
+
+    
+    
 class TokenResponseSerializer(serializers.Serializer):  # es swaggeristvis mwhirdeba 
     access = serializers.CharField()
     refresh = serializers.CharField()
