@@ -1,13 +1,18 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import TwoFactorSettings
-from .serializers import Enable2FASerializer
+from .serializers import Enable2FASerializer, QRCodeResponseSerializer
 from .utils import generate_otp_secret, get_qr_code_image
 import pyotp
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
+
 
 class Generate2FASetupView(APIView):
     permission_classes = [IsAuthenticated]
+    @extend_schema(
+        summary="Generate QR code and secret for 2FA setup",
+        responses={200: QRCodeResponseSerializer},
+    )
 
     def get(self, request):
         user = request.user
@@ -24,6 +29,12 @@ class Generate2FASetupView(APIView):
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Enable 2FA after verifying OTP",
+        request=Enable2FASerializer,
+        responses={200: OpenApiResponse(description="2FA enabled successfully.")},
+    )
+
     def post(self, request):
         serializer = Enable2FASerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
@@ -37,6 +48,15 @@ class Enable2FAView(APIView):
 class Verify2FAView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Verify the 2FA OTP code",
+        request=Enable2FASerializer,
+        responses={
+            200: OpenApiResponse(description="2FA verification successful."),
+            400: OpenApiResponse(description="Invalid OTP or 2FA not enabled.")
+        },
+    )
+    
     def post(self, request):
         code = request.data.get("otp_code")
         user = request.user
