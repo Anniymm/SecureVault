@@ -47,13 +47,6 @@ Create a `.env` file in the root directory and add the following:
 SECRET_KEY=your_django_secret_key
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
-
-# Database configuration
-DATABASE_URL=postgres://user:password@localhost:5432/securevault
-
-# JWT Configuration
-SIMPLE_JWT_SECRET_KEY=your_jwt_secret_key
-
 # Fernet Encryption Key
 FERNET_MASTER_KEY=your_fernet_key
 
