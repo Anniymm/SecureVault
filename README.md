@@ -1,5 +1,4 @@
 # 📁 SecureVault – Encrypted File Storage & Sharing System
-### Use branches 
 
 SecureVault is a Django-based application that offers secure file storage with encryption, user-specific activity logging, and robust access controls. Designed with security and user privacy in mind, it ensures that users can upload, manage, and download their files safely.
 
